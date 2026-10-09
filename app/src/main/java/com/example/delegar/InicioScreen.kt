@@ -14,32 +14,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-class InicioScreen {
-
-}
-
-
 @Composable
 fun InicioScreen(modfifer: Modifier){
-    var x by remember { mutableStateOf("Ingrese otro valor") }
-    var y by remember { mutableStateOf("Ingrese un valor") }
-    var x1 by remember { mutableStateOf(0) }
-    var y1 by remember { mutableStateOf(0) }
-    var r by remember { mutableStateOf(0) }
+    var x by remember { mutableStateOf(0) }
     Column(modfifer) {
-        TextField(value = x, onValueChange = {
-            numeroingresor -> x = numeroingresor
-            x1 = numeroingresor.toIntOrNull() ?:0
-        })
-        TextField(value = y, onValueChange = {
-            numeroingresor -> y = numeroingresor
-            y1 = numeroingresor.toIntOrNull() ?:0
-        })
-        Button(onClick = { r =  x1 + y1}) {
+        Text(text = x.toString())
+        Button(onClick = { x++}) {
             Text("Sumar")
         }
-        Text(text = r.toString())
     }
 
-    //suma dos numeros
 }

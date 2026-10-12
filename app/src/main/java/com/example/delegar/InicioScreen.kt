@@ -25,21 +25,10 @@ import com.example.delegar.Componentes.Micard
 @Composable
 fun InicioScreen(modfifer: Modifier){
     val listaNombres = listOf<String>(
-        "Carlos","Emilio","Isabela","John Pork", "JSON",
-        "Carlos","Emilio","Isabela","John Pork", "JSON",
-        "Carlos","Emilio","Isabela","John Pork", "JSON",
-        "Carlos","Emilio","Isabela","John Pork", "JSON"
+        "C","a","r","l","o","s"
     )
-
     LazyColumn(modfifer.fillMaxSize()) {
         items(listaNombres) { nombre-> Micard(modfifer, nombre) }
     }
 
-    LazyColumn(modfifer) {
-        item(){
-            listaNombres.forEach {
-                Micard(modfifer, it)
-            }
-        }
-    }
 }

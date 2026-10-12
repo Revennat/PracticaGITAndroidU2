@@ -24,7 +24,6 @@ class InicioScreen {
 @Composable
 fun InicioScreen(modfifer: Modifier){
     var x by remember { mutableStateOf("") }
-    var y by remember { mutableStateOf("") }
     var r by remember { mutableStateOf(0) }
     Column(modfifer) {
         TextField(
@@ -32,21 +31,17 @@ fun InicioScreen(modfifer: Modifier){
             onValueChange = { numeroIngresado -> x = numeroIngresado },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
-        TextField(
-            value = y,
-            onValueChange = { numeroingresor -> y = numeroingresor },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-        )
         Button(onClick = {
             val numX = x.trim().toIntOrNull() ?: 0
-            val numY = y.trim().toIntOrNull() ?: 0
-            r = numX + numY
+            r = numX
         }) {
 
             Text("Sumar")
         }
 
-        Text(text = r.toString())
+        repeat(r){
+            Text("C")
+        }
     }
 
     //suma dos numeros

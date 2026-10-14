@@ -27,33 +27,55 @@ import androidx.compose.ui.unit.sp
 import com.example.delegar.Componentes.Micard
 
 @Composable
-fun InicioScreen(modfifer: Modifier){
+fun InicioScreen(modifier: Modifier = Modifier) {
     var x by remember { mutableStateOf("") }
     val listaNombres = remember { mutableStateListOf<String>() }
-    Column(modfifer.fillMaxWidth().padding(start = 50.dp, end = 50.dp)) {
 
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
         TextField(
             value = x,
-            onValueChange = { sv -> x=sv},
-            modfifer.fillMaxWidth())
+            onValueChange = { sv -> x = sv },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Escribe un nombre") }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(
-            onClick =
-                {
-                    if (x.isNotBlank()) {
-                        listaNombres.add(x.trim())
-                        x = ""
-                    }
-                },
-            modfifer.fillMaxWidth()
+            onClick = {
+                if (x.isNotBlank()) {
+                    listaNombres.add(x.trim())
+                    x = ""
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text("Agregar")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        LazyColumn(modfifer.fillMaxSize()) {
-            items(listaNombres) { nombre-> Micard(modfifer, nombre) }
-        }
 
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(listaNombres) { nombre ->
+                Micard(
+                    nombre = nombre,
+                    Actualizar = {
+                        listaNombres.remove(nombre)
+                        x = nombre
+                    },
+                    Eliminar = {
+                        listaNombres.remove(nombre)
+                    },
+                    modifier = modifier
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
     }
 }

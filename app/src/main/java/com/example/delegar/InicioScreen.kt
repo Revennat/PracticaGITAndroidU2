@@ -32,34 +32,115 @@ import com.example.delegar.Componentes.Micard
 
 @Composable
 fun InicioScreen(modfifer: Modifier){
-    var x by remember { mutableStateOf("") }
+    var listanumeros = remember { mutableStateListOf("") }
+    var x = listanumeros.joinToString("")
+
     Column(modfifer.fillMaxWidth().padding(start = 50.dp, end = 50.dp)) {
-        TextField(value = x, onValueChange = {valor -> x = valor})
+        Text("Calculadora", fontSize = 25.sp)
+        TextField(value = if (x.isEmpty()) "0" else x, onValueChange = {})
         Row(modfifer.fillMaxWidth()) {
-            Button(onClick = { x = "7"}) { Text( "7" )}
-            Button(onClick = { x = "8"}) { Text( "8" )}
-            Button(onClick = { x = "9"}) { Text( "9" )}
+            Button(onClick = { listanumeros.add("7") }) { Text( "7" )}
+            Button(onClick = { listanumeros.add("8") }) { Text( "8" )}
+            Button(onClick = { listanumeros.add("9") }) { Text( "9" )}
             Spacer(modfifer.width(25.dp))
-            Button(onClick = { x = "-"}) { Text( "-" )}
+            Button(onClick = {
+                if(listanumeros.isNotEmpty() && !verificarOperador(listanumeros)){
+                    listanumeros.add("-")
+                }
+            }) { Text( "-" )}
         }
         Row(modfifer.fillMaxWidth()) {
-            Button(onClick = { x = "4"}) { Text( "4" )}
-            Button(onClick = { x = "5"}) { Text( "5" )}
-            Button(onClick = { x = "6"}) { Text( "6" )}
+            Button(onClick = { listanumeros.add("4") }) { Text( "4" )}
+            Button(onClick = { listanumeros.add("5") }) { Text( "5" )}
+            Button(onClick = { listanumeros.add("6") }) { Text( "6" )}
             Spacer(modfifer.width(25.dp))
-            Button(onClick = { x = "+"}) { Text( "+" )}
+            Button(onClick = {
+                if(listanumeros.isNotEmpty() && !verificarOperador(listanumeros)){
+                    listanumeros.add("+")
+                }
+            }) { Text( "+" )}
         }
         Row(modfifer.fillMaxWidth()) {
-            Button(onClick = { x = "1"}) { Text( "1" )}
-            Button(onClick = { x = "2"}) { Text( "2" )}
-            Button(onClick = { x = "3"}) { Text( "3" )}
+            Button(onClick = { listanumeros.add("1")}) { Text( "1" )}
+            Button(onClick = { listanumeros.add("2")}) { Text( "2" )}
+            Button(onClick = { listanumeros.add("3")}) { Text( "3" )}
             Spacer(modfifer.width(25.dp))
-            Button(onClick = { x = "*"}) { Text( "*" )}
+            Button(onClick = {
+                if(listanumeros.isNotEmpty() && !verificarOperador(listanumeros)){
+                    listanumeros.add("*")
+                }
+            }) { Text( "*" )}
         }
         Row(modfifer.fillMaxWidth()) {
-            Button(onClick = { x = "0"}) { Text( "0" )}
+            Button(onClick = { listanumeros.add("0")}) { Text( "0" )}
             Spacer(modfifer.width(141.5.dp))
-            Button(onClick = { x = "/"}) { Text( "/" )}
+            Button(onClick = {
+                if(listanumeros.isNotEmpty() && !verificarOperador(listanumeros)){
+                    listanumeros.add("/")
+                }
+            }) { Text( "/" )}
         }
+        Spacer(modfifer.height(16.dp))
+
+        Button(onClick = {
+            val resultado = calcularLista(listanumeros)
+            listanumeros.clear()
+            listanumeros.add(resultado.toString())
+        }, modfifer.fillMaxWidth())
+        { Text("=")}
+
+        Button(onClick = { listanumeros.clear() }, modfifer.fillMaxWidth())
+        { Text("C") }
+
     }
 }
+
+fun verificarOperador(list: List<String>) : Boolean{
+    val operadores = listOf("+", "-", "*", "/")
+    return list.any {it in operadores}
+}
+
+fun calcularLista(list: List<String>) : Double{
+    val expr = list.joinToString("")
+
+    if (expr.contains("+")) {
+        val partes = expr.split("+")
+        if (partes.size == 2){
+            val num1 = partes[0].toDoubleOrNull() ?: 0.0
+            val num2 = partes[1].toDoubleOrNull() ?: 0.0
+            return num1 + num2
+        }
+    }
+
+    if (expr.contains("-")) {
+        val partes = expr.split("-")
+        if (partes.size == 2){
+            val num1 = partes[0].toDoubleOrNull() ?: 0.0
+            val num2 = partes[1].toDoubleOrNull() ?: 0.0
+            return num1 - num2
+        }
+    }
+
+    if (expr.contains("*")) {
+        val partes = expr.split("*")
+        if (partes.size == 2){
+            val num1 = partes[0].toDoubleOrNull() ?: 0.0
+            val num2 = partes[1].toDoubleOrNull() ?: 0.0
+            return num1 * num2
+        }
+    }
+
+    if (expr.contains("/")) {
+        val partes = expr.split("/")
+        if (partes.size == 2){
+            val num1 = partes[0].toDoubleOrNull() ?: 0.0
+            val num2 = partes[1].toDoubleOrNull() ?: 0.0
+            if (num2 == 0.0){
+                return 0.0
+            }
+            return num1 / num2
+        }
+    }
+    return expr.toDoubleOrNull() ?: 0.0
+}
+

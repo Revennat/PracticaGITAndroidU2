@@ -1,10 +1,15 @@
 package com.example.delegar
 
 import android.R
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -12,7 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -30,36 +38,96 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.delegar.Componentes.Micard
 
+
 @Composable
-fun InicioScreen(modfifer: Modifier){
-    var x by remember { mutableStateOf("") }
-    Column(modfifer.fillMaxWidth().padding(start = 50.dp, end = 50.dp)) {
-        TextField(value = x, onValueChange = {valor -> x = valor})
-        Row(modfifer.fillMaxWidth()) {
-            Button(onClick = { x = "7"}) { Text( "7" )}
-            Button(onClick = { x = "8"}) { Text( "8" )}
-            Button(onClick = { x = "9"}) { Text( "9" )}
-            Spacer(modfifer.width(25.dp))
-            Button(onClick = { x = "-"}) { Text( "-" )}
+fun AforoScreen(modifier: Modifier) {
+    var actuales by remember { mutableStateOf(0) }
+    var visitasDelDia by remember { mutableStateOf(0) }
+    val AforeMax = 50
+    val porcentaje = actuales / AforeMax.toFloat()
+
+    Box(modifier.fillMaxSize().padding(15.dp)){
+        Column(modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth()) {
+                Text("Biblioteca Central", fontSize = 25.sp)
+            }
+            Spacer(modifier.height(50.dp))
+            Text("Sala de estudio * Capacidad $AforeMax", fontSize = 10.sp, color = Color.DarkGray)
+            Micard(modifier = modifier, capacidad = "$actuales/$AforeMax", porcentaje)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { if (actuales > 0){
+                        actuales--
+                    } },
+                    modifier = Modifier.weight(1f),
+                    enabled = actuales > 0,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFF6750A4)
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFF6750A4))
+                ) {
+                    Text("Sale -")
+                }
+
+                Button(
+                    onClick = {
+                        if (actuales < AforeMax) {
+                            actuales++
+                            visitasDelDia++
+                        }},
+                    modifier = Modifier.weight(1f),
+                    enabled = actuales < 50,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF6750A4),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Entra +")
+                }
+            }
+            Spacer(modifier.height(10.dp))
+            AforoVisita(visitasDelDia)
+            Row(modifier.fillMaxWidth().height(300.dp), verticalAlignment = Alignment.Bottom) {
+                OutlinedButton(onClick = {
+                    actuales = 0
+                    visitasDelDia = 0
+                },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color.Red
+                    ),
+                    border = BorderStroke(1.dp, Color.Red)
+                )
+                {
+                    Text("Cerrar dia")
+                }
+            }
         }
-        Row(modfifer.fillMaxWidth()) {
-            Button(onClick = { x = "4"}) { Text( "4" )}
-            Button(onClick = { x = "5"}) { Text( "5" )}
-            Button(onClick = { x = "6"}) { Text( "6" )}
-            Spacer(modfifer.width(25.dp))
-            Button(onClick = { x = "+"}) { Text( "+" )}
+
+    }
+
+}
+
+
+@Composable
+fun AforoVisita(visitas: Int){
+    Box(modifier = Modifier.fillMaxWidth().height(100.dp).border(
+        width = 2.dp,
+        color = Color(0xFFF3EEF6),
+        shape = RoundedCornerShape(12.dp)
+    ).background(Color(0xFFF3EEF6))){
+        Column(Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.SpaceBetween) {
+            Text("Visitas del Dia", color = Color(0xFF4A4458), fontSize = 18.sp)
+            Text("Solo suma visitas del dia", color = Color(0xFF4A4458), fontSize = 14.sp)
+
         }
-        Row(modfifer.fillMaxWidth()) {
-            Button(onClick = { x = "1"}) { Text( "1" )}
-            Button(onClick = { x = "2"}) { Text( "2" )}
-            Button(onClick = { x = "3"}) { Text( "3" )}
-            Spacer(modfifer.width(25.dp))
-            Button(onClick = { x = "*"}) { Text( "*" )}
-        }
-        Row(modfifer.fillMaxWidth()) {
-            Button(onClick = { x = "0"}) { Text( "0" )}
-            Spacer(modfifer.width(141.5.dp))
-            Button(onClick = { x = "/"}) { Text( "/" )}
+        Column(Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
+            Text("$visitas", fontSize = 40.sp, color = Color(0xFF4A4458))
         }
     }
+
 }

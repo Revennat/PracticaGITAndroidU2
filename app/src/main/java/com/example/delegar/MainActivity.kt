@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             DelegarTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    AforoScreen(modifier = Modifier.padding(innerPadding))
+                    LecturaScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
 fun GreetingPreview() {
     DelegarTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            AforoScreen(modifier = Modifier.padding(innerPadding))
+            LecturaScreen(modifier = Modifier.padding(innerPadding))
         }
     }
 }

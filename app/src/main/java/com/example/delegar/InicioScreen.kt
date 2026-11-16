@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -66,6 +67,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -73,68 +75,95 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.os.bundleOf
 import com.example.delegar.Componentes.Micard
+import java.text.DecimalFormat
 import kotlin.collections.listOf
-
-data class Producto(val nombre: String, val precio: Double)
+import kotlin.math.ceil
+import kotlin.math.floor
 
 @Composable
-fun CarritoScreen(modifier: Modifier) {
-    val catalogo = remember { listOf(
-        Producto("Frijol 1 Kg", 25.00),
-        Producto("Leche 1 L", 27.50),
-        Producto("Tortillas 1 Kg", 27.00),
-        Producto("Huevo 12 pz", 50.25))}
-    val cantidades = remember { mutableStateListOf(0, 0, 0, 0) }
+fun CuentaScreen(modifier: Modifier){
 
-    val totalcantidad by remember {
-        derivedStateOf {
-            cantidades.sum()
+    var valor by remember { mutableStateOf("0.00") }
+    var porcentajef by remember { mutableStateOf(10) }
+    var personas by remember { mutableStateOf(1) }
+    var UseOtro by remember { mutableStateOf(false) }
+    var redondeado by remember { mutableStateOf(false) }
+    val propina by remember { derivedStateOf {
+        val subtotal = valor.toDoubleOrNull() ?: 0.0
+        subtotal * (porcentajef.toDouble() / 100.0)
         }
     }
-    val subtotal by remember { derivedStateOf {
-                catalogo.indices.sumOf { catalogo[it].precio * cantidades[it]
-            }
+    val total by remember { derivedStateOf {
+        (valor.toDoubleOrNull() ?: 0.0) + propina
         }
     }
-    val porcentajeDescuento = if (subtotal >= 200.0) .10 else 0.0;
-    val montoDescuento = subtotal * porcentajeDescuento
-    val envio = if ( (subtotal - montoDescuento) >= 150.0) 0.0 else 25.0
-    val total = (subtotal - montoDescuento) + envio;
-
-    Box(modifier.fillMaxSize().background(Color.White).wrapContentHeight().padding(14.dp)){
-        Row(modifier.wrapContentHeight().fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Tienda Don Pepe", style = MaterialTheme.typography.titleLarge, color = Color.Black)
-            Text("6", color = Color.Black)
+    val porPersona by remember { derivedStateOf {
+            total / personas
         }
-        Column(modifier.fillMaxWidth()) {
-            Column(modifier = modifier.fillMaxWidth()) {
-                ProductoItem(catalogo.get(0), cantidades.get(0), {cambio -> cantidades[0] = cambio})
-                HorizontalDivider(Modifier.height(24.dp))
-                ProductoItem(catalogo.get(1), cantidades.get(1), {cambio -> cantidades[1] = cambio})
-                HorizontalDivider(Modifier.height(24.dp))
-                ProductoItem(catalogo.get(2), cantidades.get(2), {cambio -> cantidades[2] = cambio})
-                HorizontalDivider(Modifier.height(24.dp))
-                ProductoItem(catalogo.get(3), cantidades.get(3), {cambio -> cantidades[3] = cambio})
-                HorizontalDivider(Modifier.height(24.dp))
-                ResumenCarrito(totalcantidad, subtotal, porcentajeDescuento, envio, total)
+    }
+    val pagoPorPersonaRedondeado = ceil(porPersona)
+    val sobrante = if (redondeado) (pagoPorPersonaRedondeado * personas) - total else 0.0
+
+    Box(
+        Modifier.fillMaxWidth().padding(24.dp).wrapContentHeight(),
+        contentAlignment = Alignment.Center
+    ){
+        Column(
+            Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+
+            ) {
+                Text("Cuenta dividida", style = MaterialTheme.typography.titleLarge)
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton({
-                    cantidades[0] = 0
-                    cantidades[1] = 0
-                    cantidades[2] = 0
-                    cantidades[3] = 0
-                }) {
-                    Text("Vaciar Carrito", color = Color.Black)
+            Column(
+                Modifier.fillMaxWidth().padding(8.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+
+            ) {
+                OutlinedTextField(
+                    value = valor,
+                    onValueChange =
+                        {cambio ->
+                        if (cambio.matches(Regex("^\\d*\\.?\\d*\\.?$"))) { valor = cambio }
+                        },
+                    modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    label = { Text("Monto de la cuenta") }
+                )
+            }
+
+            Column(
+                Modifier.fillMaxWidth().padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text("Propina")
+                SelectorPropina(
+                    porcentaje = porcentajef,
+                    usaOtro = UseOtro,
+                    onPorcentajeChange = {cambio -> porcentajef = cambio},
+                    onOtroChange = {cambio -> UseOtro = cambio}
+                )
+
+                StepperPersonas(
+                    personas = personas,
+                    onChange = {cambio -> personas = cambio}
+                )
+                Row(
+                    modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Redondear por persona?")
+                    Switch(checked = redondeado, onCheckedChange = { cambio -> redondeado = cambio})
                 }
-                Button({
-                    cantidades[0] = 0
-                    cantidades[1] = 0
-                    cantidades[2] = 0
-                    cantidades[3] = 0
-                }){
-                    Text("Confirmar pedido")
-                }
+                ResultadoCuenta(propina, total, porPersona, sobrante = sobrante )
+
             }
         }
 
@@ -143,69 +172,118 @@ fun CarritoScreen(modifier: Modifier) {
 }
 
 @Composable
-fun ProductoItem(producto: Producto, cantidad: Int, onCantidadChange: (Int) -> Unit)
+fun SelectorPropina(porcentaje: Int, usaOtro: Boolean, onPorcentajeChange: (Int) -> Unit, onOtroChange: (Boolean) -> Unit)
 {
-    Column(
-        Modifier.fillMaxWidth().background(Color(0xFFF3F4F6)),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        FilterChip(
+            selected = !usaOtro && porcentaje == 10,
+            onClick =
+                {
+                    onPorcentajeChange(10)
+                    onOtroChange(false)
+                },
+            label = {Text("10%")})
+        FilterChip(
+            selected = !usaOtro && porcentaje == 15,
+            onClick =
+                {
+                    onPorcentajeChange(15)
+                    onOtroChange(false)
+                },
+            label = {Text("15%")})
+        FilterChip(
+            selected = !usaOtro && porcentaje == 20,
+            onClick =
+                {
+                    onPorcentajeChange(20)
+                    onOtroChange(false)
+                },
+            label = {Text("20%")})
+        FilterChip(
+            selected = usaOtro,
+            onClick =
+                {
+                    onOtroChange(true)
+                },
+            label = {Text("Otro")})
+    }
+    if (usaOtro){
+        Column(modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Personalizado: $porcentaje%",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
+            Slider(
+                value = porcentaje.toFloat(),
+                onValueChange = { nuevoValor ->
+                    onPorcentajeChange(nuevoValor.toInt())
+                },
+                valueRange = 1f..30f
+            )
+        }
+    }
+}
+
+@Composable
+fun StepperPersonas(personas: Int, onChange: (Int) -> Unit){
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text("Personas")
+
+        Button({onChange(personas - 1)}, enabled = personas > 1){
+            Text("-")
+        }
+        Text(personas.toString())
+        Button({onChange(personas + 1)}, enabled = personas < 20){
+            Text("+")
+        }
+    }
+}
+
+@Composable
+fun ResultadoCuenta(propina: Double, total: Double, porPersona: Double, sobrante: Double?,)
+{
+
+    val formato = DecimalFormat("$0.00")
+    Box(modifier = Modifier.fillMaxWidth().wrapContentHeight()
+        .background(Color.LightGray)
+        .border(
+            border = BorderStroke(1.dp, color = Color.LightGray),
+            shape = CircleShape
+        ),
+        Alignment.Center,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(100.dp),
+            Alignment.CenterVertically
+        ) {
+          Column(
+              verticalArrangement = Arrangement.SpaceBetween,
+              horizontalAlignment = Alignment.Start
+          ) {
+              Text("Propina: ", color = Color.Black)
+              Text("Total con propina: ", color = Color.Black)
+              Text("Cada quien paga: ", color = Color.Black)
+              Text("Sobrante: ", color = Color.Black)
+          }
+          Column(
+              verticalArrangement = Arrangement.SpaceBetween,
+              horizontalAlignment = Alignment.End
+          ) {
+              Text(formato.format(propina), color = Color.Black)
+              Text(formato.format(total), color = Color.Black)
+              Text(if (sobrante == 0.0) formato.format(porPersona) else formato.format(ceil(porPersona)), color = Color.Black)
+              Text(if (sobrante == 0.0) "$0.00"  else formato.format(sobrante))
+          }
 
-        )
-        {
-            Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(text = producto.nombre, style = MaterialTheme.typography.bodyLarge, color =  Color.Black)
-                Text(text = "$${producto.precio.toInt()}.00 c/u", style = MaterialTheme.typography.bodyMedium, color =  Color.Black)
-            }
-            Row(modifier = Modifier.padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp) , verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(
-                    onClick = { onCantidadChange(cantidad - 1) },
-                    modifier = Modifier.defaultMinSize(minWidth = 1.dp, minHeight = 1.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    enabled = cantidad > 0
-                ) {
-                    Text(text = "-", color = Color.Black)
-                }
-                Text(text = cantidad.toString(), style = MaterialTheme.typography.bodyLarge)
-                OutlinedButton(
-                    onClick = { onCantidadChange( cantidad + 1)},
-                    modifier = Modifier.defaultMinSize(minWidth = 1.dp, minHeight = 1.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(text = "+", color = Color.Black )
-                }
-            }
-        }
-
-
-    }
-    Spacer(modifier = Modifier.height(10.dp))
-}
-
-@Composable
-fun ResumenCarrito(articulos: Int, subtotal: Double, descuento: Double, envio: Double, total: Double)
-{
-    Box(modifier = Modifier.fillMaxWidth().wrapContentHeight().background(Color(0xFFE5E7EB)), contentAlignment = Alignment.Center){
-        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Articulos", color = Color.Black)
-                Text("Subtotal", color = Color.Black)
-                Text("Descuento", color = Color.Black)
-                Text("Envio", color = Color.Black)
-                Text("Total", style = MaterialTheme.typography.titleLarge, color = Color.Black)
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(articulos.toString(), color = Color.Black)
-                Text(subtotal.toString(), color = Color.Black)
-                Text(descuento.toString(), color = Color.Black)
-                Text(if (envio != 25.0) "GRATIS" else "+$${envio}", color = if (envio != 25.0) Color.Green else Color.Red)
-                Text(text =  if (total != 25.0) "$${total}" else "$0.00", style = MaterialTheme.typography.titleLarge, color = Color.Black)
-            }
         }
     }
 }
-

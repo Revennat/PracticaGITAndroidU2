@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.paddingFrom
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -67,6 +69,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.motionEventSpy
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
@@ -80,243 +83,135 @@ import androidx.compose.ui.unit.sp
 import androidx.core.os.bundleOf
 import com.example.delegar.Componentes.Micard
 import kotlin.collections.listOf
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.composed
 
-
-enum class Prioridad(int: Int){
-    BAJA(1), MEDIA(2), ALTA(3)
-}
-enum class Filtro{
-     TODOS,PENDIENTES, HECHAS
-}
-
-data class Tarea(val id: Int, val titulo: String, val prioridad: Prioridad, val hecha: Boolean = false)
 
 @Composable
-fun TareasScreen(modifier: Modifier) {
-    var contador = 0
-
-    val tareas = remember { mutableStateListOf<Tarea>() }
-    var tarea by remember { mutableStateOf("") }
-    var prioridadNueva by remember { mutableStateOf(Prioridad.ALTA) }
-    var filtroActual by remember { mutableStateOf(Filtro.TODOS) }
-    var mostrarDialogo by remember { mutableStateOf(false) }
-    val tareasVisibles by remember {
-        derivedStateOf {
-            when (filtroActual) {
-                Filtro.TODOS -> tareas
-                Filtro.PENDIENTES -> tareas.filter { !it.hecha }
-                Filtro.HECHAS -> tareas.filter { it.hecha }
-            }
-        }
-    }
-
-    val pendientes by remember {
-        derivedStateOf {
-            tareas.count() { !it.hecha }
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 46.dp, bottom = 46.dp, start = 16.dp, end = 16.dp), // Margen general para que no pegue a los bordes del teléfono
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Título
-        Text(
-            text = "Mis pendientes",
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        // Fila de Input y Botón de Agregar
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextField(
-                value = tarea,
-                onValueChange = { cambio -> tarea = cambio },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Nueva tarea...") }
-            )
-            Button(
-                onClick = {
-                    if (tarea.isNotEmpty()) {
-                        tareas.add(Tarea(contador++, tarea.trim(), prioridadNueva))
-                        tarea = ""
-                    }
-                },
-                enabled = tarea.isNotEmpty()
-            ) {
-                Text("+")
-            }
-        }
-
-        // Fila de Prioridades
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Prioridad: ")
-            FilterChip(
-                selected = prioridadNueva == Prioridad.ALTA,
-                onClick = { prioridadNueva = Prioridad.ALTA },
-                label = { Text(if (prioridadNueva != Prioridad.ALTA) "Alta" else "✓ Alta") }
-            )
-            FilterChip(
-                selected = prioridadNueva == Prioridad.MEDIA,
-                onClick = { prioridadNueva = Prioridad.MEDIA },
-                label = { Text(if (prioridadNueva != Prioridad.MEDIA) "Media" else "✓ Media") }
-            )
-            FilterChip(
-                selected = prioridadNueva == Prioridad.BAJA,
-                onClick = { prioridadNueva = Prioridad.BAJA },
-                label = { Text(if (prioridadNueva != Prioridad.BAJA) "Baja" else "✓ Baja") }
-            )
-        }
-
-        // Fila de Filtros (Todos, Pendientes, Hechas)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            FilterChip(
-                selected = filtroActual != Filtro.PENDIENTES && filtroActual != Filtro.HECHAS,
-                onClick = { filtroActual = Filtro.TODOS },
-                label = { Text(if (filtroActual != Filtro.TODOS) "Todos" else "✓ Todos") }
-            )
-            FilterChip(
-                selected = filtroActual == Filtro.PENDIENTES,
-                onClick = { filtroActual = Filtro.PENDIENTES },
-                label = { Text(if (filtroActual != Filtro.PENDIENTES) "Pendientes" else "✓ Pendientes") }
-            )
-            FilterChip(
-                selected = filtroActual == Filtro.HECHAS,
-                onClick = { filtroActual = Filtro.HECHAS },
-                label = { Text(if (filtroActual != Filtro.HECHAS) "Hechas" else "✓ Hechas") }
-            )
-        }
-
-        // Lista de tareas (Con .weight(1f) para que respete el espacio y haga scroll interno)
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f), // <- Clave para que no empuje el footer fuera de la pantalla
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            items(tareasVisibles) { tareaItem ->
-                TareaItem(
-                    tarea = tareaItem,
-                    onCheckedChange = { cambio ->
-                        val index = tareas.indexOf(tareaItem)
-                        if (index != -1) {
-                            tareas[index] = tareaItem.copy(hecha = cambio)
-                        }
-                    },
-                    onDelete = {
-                        tareas.remove(tareaItem) // <- Seguro y evita IndexOutOfBoundsException
-                    }
-                )
-            }
-        }
-
-        // Footer inferior fijo
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text("Pendientes ${pendientes} de ${tareas.size}")
-            Button(
-                onClick = { mostrarDialogo = true },
-                enabled = tareas.any { it.hecha }
-            ) {
-                Text("Borrar Completadas")
-            }
-
-            if (mostrarDialogo) {
-                val cantidadHechas = tareas.count { it.hecha }
-
-                ConfirmarBorradoDialog(
-                    cantidad = cantidadHechas,
-                    onConfirm = {
-                        tareas.removeAll { it.hecha }
-                        mostrarDialogo = false
-                    },
-                    onDismiss = {
-                        mostrarDialogo = false
-                    }
-                )
-            }
-        }
-    }
-}
-@Composable
-fun TareaItem(tarea: Tarea, onCheckedChange: (Boolean) -> Unit, onDelete: () -> Unit){
-
-    Box(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Checkbox(
-                    checked = tarea.hecha,
-                    onCheckedChange = onCheckedChange
-                )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    Text(text = tarea.titulo, textDecoration = if (tarea.hecha) TextDecoration.LineThrough else null)
-                    Text(
-                        text = tarea.prioridad.toString(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (tarea.prioridad == Prioridad.ALTA) Color.Red else if (tarea.prioridad == Prioridad.MEDIA) Color.Yellow else Color.Green
-                    )
-                }
-                Button(onClick = onDelete) {
-                    Text("x")
-                }
-            }
-
-            HorizontalDivider()
-        }
-    }
-}
-
-@Composable
-fun ConfirmarBorradoDialog(cantidad: Int, onConfirm: () -> Unit, onDismiss: () -> Unit){
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(text = "Borrar tareas completadas")
-        },
-        text = {
-            Text(text = "¿Estás seguro de que deseas eliminar las $cantidad tareas completadas?")
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm
-            ) {
-                Text("Eliminar")
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss
-            ) {
-                Text("Cancelar")
-            }
-        }
+fun RatingBar(rating: Int, onRatingChange: (Int) -> Unit, modifier: Modifier = Modifier)
+{
+    Row(
+        modifier.fillMaxWidth().padding(8.dp)
     )
+    {
+        for (i in 1..5) {
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = "Estrella $i",
+                tint = if (i <= rating) Color(0xFFFFB000) else Color.Gray,
+                modifier = Modifier
+                    .size(32.dp)
+                    .clickable { onRatingChange(i) }
+            )
+        }
+    }
+}
+
+@Composable
+fun ResenaScreen(modifier: Modifier) {
+    var comida by remember { mutableStateOf(0) }
+    var servicio by remember { mutableStateOf( 0) }
+    var ambiente by remember { mutableStateOf(0) }
+    var comentario by remember { mutableStateOf(" ") }
+    var etiquetas by remember { mutableStateOf(setOf<String>()) }
+    var publicada by remember { mutableStateOf(false) }
+    val general by remember {
+        derivedStateOf {
+                (comida+servicio+ambiente).toDouble()/3.0
+        }
+    }
+    val puedePublicar by remember {
+        derivedStateOf {
+            comida >= 1 && servicio >= 1 && ambiente >= 1 && comentario.trim().length > 20
+        }
+    }
+
+
+    Column(modifier = modifier.padding(16.dp))
+    {
+        Column(
+            modifier.fillMaxWidth().padding(2.dp).weight(0.25f).wrapContentHeight(),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.Start
+        ){
+            Text("<- Escribe tu reseña")
+        }
+        Column(
+            modifier.fillMaxWidth().padding(2.dp).weight(0.25f).wrapContentHeight(),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text("Restaurante El Marino")
+            Text("Escribe tu reseña")
+        }
+        Column(
+            modifier.fillMaxWidth().weight(1f).wrapContentHeight(),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text("Comida")
+            RatingBar(comida, {cambio -> comida = cambio})
+            Text("Servicio")
+            RatingBar(servicio,{cambio -> servicio = cambio})
+            Text("Ambiente")
+            RatingBar(ambiente,{cambio -> ambiente = cambio})
+            Spacer(modifier.height(10.dp))
+        }
+        Column(
+            modifier.fillMaxWidth().weight(1f).wrapContentHeight(),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally)
+        {
+            ComentarioField(comentario, onChange = {cambio -> comentario = cambio})
+        }
+        Column(
+            modifier.fillMaxWidth().weight(1f).wrapContentHeight(),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally)
+        {
+            ResumenResena(general, comentario, etiquetas)
+        }
+    }
+}
+
+@Composable
+fun ComentarioField(texto: String, onChange: (String) -> Unit, maximo: Int = 200){
+    val colorAlerta = if (texto.length > 180) Color.Red else Color.Unspecified
+    OutlinedTextField(
+        texto,
+        {onChange(it)},
+        colors = OutlinedTextFieldDefaults.colors(
+            colorAlerta,
+            colorAlerta
+        ),
+        modifier = Modifier.fillMaxWidth(),
+        label = {Text("Comentario")}
+    )
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.End
+
+    ) {
+        Text("${texto.length}/${maximo}")
+    }
+}
+
+@Composable
+fun ResumenResena(general: Double, comentario: String, etiquetas: Set<String>){
+
+
+    Box(Modifier.fillMaxWidth().padding(2.dp).border(
+        border = BorderStroke(1.dp, color = Color.LightGray), CircleShape
+    ), Alignment.Center){
+        Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Calificacion general")
+            Text(general.toString())
+        }
+    }
+
 }
 

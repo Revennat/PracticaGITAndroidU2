@@ -11,6 +11,7 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,8 +29,10 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -85,43 +88,67 @@ import com.example.delegar.Componentes.Micard
 import kotlin.collections.listOf
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.composed
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.util.Locale
 
 
 @Composable
 fun RatingBar(rating: Int, onRatingChange: (Int) -> Unit, modifier: Modifier = Modifier)
 {
+
+    val ratingText = when (rating) {
+        1 -> "Horrible"
+        2 -> "Mala"
+        3 -> "Neutro"
+        4 -> "Buena"
+        5 -> "Excelente"
+        else -> ""
+    }
     Row(
-        modifier.fillMaxWidth().padding(8.dp)
+        modifier.fillMaxWidth().padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     )
     {
-        for (i in 1..5) {
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = "Estrella $i",
-                tint = if (i <= rating) Color(0xFFFFB000) else Color.Gray,
-                modifier = Modifier
-                    .size(32.dp)
-                    .clickable { onRatingChange(i) }
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            for (i in 1..5) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Estrella $i",
+                    tint = if (i <= rating) Color(0xFFFFB000) else Color.Gray,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clickable { onRatingChange(i) }
+                )
+            }
         }
+
+        Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            Text(ratingText)
+        }
+
     }
 }
 
 @Composable
-fun ResenaScreen(modifier: Modifier) {
+fun ResenaScreen(modifier: Modifier = Modifier) {
     var comida by remember { mutableStateOf(0) }
-    var servicio by remember { mutableStateOf( 0) }
+    var servicio by remember { mutableStateOf(0) }
     var ambiente by remember { mutableStateOf(0) }
-    var comentario by remember { mutableStateOf(" ") }
+    var comentario by remember { mutableStateOf("") }
     var etiquetas by remember { mutableStateOf(setOf<String>()) }
     var publicada by remember { mutableStateOf(false) }
+
     val general by remember {
         derivedStateOf {
-                (comida+servicio+ambiente).toDouble()/3.0
+            (comida + servicio + ambiente).toDouble() / 3.0
         }
     }
     val puedePublicar by remember {
@@ -130,88 +157,148 @@ fun ResenaScreen(modifier: Modifier) {
         }
     }
 
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("<- Escribe tu reseña")
 
-    Column(modifier = modifier.padding(16.dp))
-    {
-        Column(
-            modifier.fillMaxWidth().padding(2.dp).weight(0.25f).wrapContentHeight(),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.Start
-        ){
-            Text("<- Escribe tu reseña")
-        }
-        Column(
-            modifier.fillMaxWidth().padding(2.dp).weight(0.25f).wrapContentHeight(),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.Start
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text("Restaurante El Marino")
             Text("Escribe tu reseña")
         }
-        Column(
-            modifier.fillMaxWidth().weight(1f).wrapContentHeight(),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.Start
-        ) {
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Comida")
-            RatingBar(comida, {cambio -> comida = cambio})
+            RatingBar(comida, { cambio -> comida = cambio })
+
             Text("Servicio")
-            RatingBar(servicio,{cambio -> servicio = cambio})
+            RatingBar(servicio,{ cambio -> servicio = cambio })
+
             Text("Ambiente")
-            RatingBar(ambiente,{cambio -> ambiente = cambio})
-            Spacer(modifier.height(10.dp))
+            RatingBar(ambiente, { cambio -> ambiente = cambio })
         }
-        Column(
-            modifier.fillMaxWidth().weight(1f).wrapContentHeight(),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.CenterHorizontally)
-        {
-            ComentarioField(comentario, onChange = {cambio -> comentario = cambio})
-        }
-        Column(
-            modifier.fillMaxWidth().weight(1f).wrapContentHeight(),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.CenterHorizontally)
-        {
-            ResumenResena(general, comentario, etiquetas)
+
+        ResumenResena(
+            general = general,
+            comentario = comentario,
+            onComentarioChange = { cambio -> comentario = cambio },
+            etiquetas = etiquetas,
+            onEtiquetasChange = { nuevas -> etiquetas = nuevas }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                publicada = true
+                comida = 0
+                ambiente = 0
+                servicio = 0
+                comentario = ""
+                etiquetas = setOf<String>() },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = puedePublicar
+        ) {
+            Text("Publicar")
         }
     }
 }
 
 @Composable
-fun ComentarioField(texto: String, onChange: (String) -> Unit, maximo: Int = 200){
+fun ComentarioField(
+    texto: String,
+    onChange: (String) -> Unit,
+    maximo: Int = 200
+) {
     val colorAlerta = if (texto.length > 180) Color.Red else Color.Unspecified
+
     OutlinedTextField(
-        texto,
-        {onChange(it)},
+        value = texto,
+        onValueChange = { nuevoTexto ->
+            if (nuevoTexto.length <= maximo) {
+                onChange(nuevoTexto)
+            }
+        },
         colors = OutlinedTextFieldDefaults.colors(
-            colorAlerta,
-            colorAlerta
+            focusedTextColor = colorAlerta,
+            unfocusedTextColor = colorAlerta
         ),
+        supportingText = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Text(
+                    text = "${texto.length}/$maximo",
+                    color = colorAlerta
+                )
+            }
+        },
+        isError = texto.length > maximo,
         modifier = Modifier.fillMaxWidth(),
-        label = {Text("Comentario")}
+        label = { Text("Comentario") }
     )
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.End
-
-    ) {
-        Text("${texto.length}/${maximo}")
-    }
 }
-
 @Composable
-fun ResumenResena(general: Double, comentario: String, etiquetas: Set<String>){
+fun ResumenResena(general: Double, comentario: String, onComentarioChange: (String) -> Unit,  etiquetas: Set<String>, onEtiquetasChange: (Set<String>) -> Unit) {
+    val df = DecimalFormat("0.0", DecimalFormatSymbols(Locale.US))
 
-
-    Box(Modifier.fillMaxWidth().padding(2.dp).border(
-        border = BorderStroke(1.dp, color = Color.LightGray), CircleShape
-    ), Alignment.Center){
-        Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+    Box(
+        Modifier.fillMaxWidth().padding(2.dp).border(
+            border = BorderStroke(1.dp, color = Color.LightGray), CircleShape
+        ), Alignment.Center
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text("Calificacion general")
-            Text(general.toString())
+            Text(df.format(general))
         }
     }
+    Box(Modifier.fillMaxWidth()) {
+        ComentarioField(comentario, onComentarioChange)
+    }
+    val opcionesEtiquetas = remember {
+        listOf("Familiar", "Económico", "Rápido", "Romántico", "Vegetariano")
+    }
 
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        opcionesEtiquetas.forEach { etiqueta ->
+            val seleccionada = etiqueta in etiquetas
+
+            FilterChip(
+                selected = seleccionada,
+                onClick = {
+                    val actualizado = if (seleccionada) {
+                        etiquetas - etiqueta
+                    } else {
+                        etiquetas + etiqueta
+                    }
+                    onEtiquetasChange(actualizado)
+                },
+                label = { Text(etiqueta) },
+                leadingIcon = if (seleccionada) {
+                    {
+                        Icon(
+                            imageVector = Icons.Rounded.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(FilterChipDefaults.IconSize)
+                        )
+                    }
+                } else null
+            )
+        }
+    }
 }
 

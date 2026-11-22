@@ -111,7 +111,6 @@ fun AforoScreen(modifier: Modifier) {
 
 }
 
-
 @Composable
 fun AforoVisita(visitas: Int){
     Box(modifier = Modifier.fillMaxWidth().height(100.dp).border(

@@ -1,8 +1,9 @@
 package com.example.delegar.ViewModel
 
 
-import com.example.delegar.Model.AforoUiState
+
 import androidx.lifecycle.ViewModel
+import com.example.delegar.Model.AforoModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

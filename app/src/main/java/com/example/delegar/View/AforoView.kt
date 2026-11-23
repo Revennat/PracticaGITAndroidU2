@@ -59,7 +59,7 @@ fun AforoScreen(modifier: Modifier, viewModel: AforoViewModel = viewModel()) {
                 }
 
                 Button(
-                    onClick = { viewModel.registrarEnterada() },
+                    onClick = { viewModel.registrarEntrada() },
                     modifier = Modifier.weight(1f),
                     enabled = uiState.actuales < 50,
                     colors = ButtonDefaults.buttonColors(

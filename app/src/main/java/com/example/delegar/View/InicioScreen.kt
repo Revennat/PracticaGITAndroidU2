@@ -1,12 +1,6 @@
-package com.example.delegar
+package com.example.delegar.View
 
-import android.R
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,125 +8,62 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderColors
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.paint
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
-import androidx.core.os.bundleOf
-import com.example.delegar.Componentes.Micard
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.delegar.Model.Producto
+import com.example.delegar.ViewModel.PepeViewModel
 import kotlin.collections.listOf
 
-data class Producto(val nombre: String, val precio: Double)
+
 
 @Composable
-fun CarritoScreen(modifier: Modifier) {
-    val catalogo = remember { listOf(
-        Producto("Frijol 1 Kg", 25.00),
-        Producto("Leche 1 L", 27.50),
-        Producto("Tortillas 1 Kg", 27.00),
-        Producto("Huevo 12 pz", 50.25))}
-    val cantidades = remember { mutableStateListOf(0, 0, 0, 0) }
+fun CarritoScreen(modifier: Modifier, viewModel: PepeViewModel = viewModel()) {
 
-    val totalcantidad by remember {
-        derivedStateOf {
-            cantidades.sum()
-        }
-    }
-    val subtotal by remember { derivedStateOf {
-                catalogo.indices.sumOf { catalogo[it].precio * cantidades[it]
-            }
-        }
-    }
-    val porcentajeDescuento = if (subtotal >= 200.0) .10 else 0.0;
-    val montoDescuento = subtotal * porcentajeDescuento
-    val envio = if ( (subtotal - montoDescuento) >= 150.0) 0.0 else 25.0
-    val total = (subtotal - montoDescuento) + envio;
+    val uiState by viewModel.uiState.collectAsState()
 
-    Box(modifier.fillMaxSize().background(Color.White).wrapContentHeight().padding(14.dp)){
-        Row(modifier.wrapContentHeight().fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Tienda Don Pepe", style = MaterialTheme.typography.titleLarge, color = Color.Black)
-            Text("6", color = Color.Black)
-        }
+    Box(modifier.fillMaxWidth().background(Color.White).padding(14.dp)){
+
         Column(modifier.fillMaxWidth()) {
+            Row(modifier.fillMaxWidth().wrapContentHeight(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Tienda Don Pepe", style = MaterialTheme.typography.titleLarge, color = Color.Black)
+                Text("6", color = Color.Black)
+            }
             Column(modifier = modifier.fillMaxWidth()) {
-                ProductoItem(catalogo.get(0), cantidades.get(0), {cambio -> cantidades[0] = cambio})
+                ProductoItem(uiState.catalogo.get(0), uiState.cantidades.get(0), {viewModel.onChange(it, 0)})
                 HorizontalDivider(Modifier.height(24.dp))
-                ProductoItem(catalogo.get(1), cantidades.get(1), {cambio -> cantidades[1] = cambio})
+                ProductoItem(uiState.catalogo.get(1), uiState.cantidades.get(1), {viewModel.onChange(it, 1)})
                 HorizontalDivider(Modifier.height(24.dp))
-                ProductoItem(catalogo.get(2), cantidades.get(2), {cambio -> cantidades[2] = cambio})
+                ProductoItem(uiState.catalogo.get(2), uiState.cantidades.get(2), {viewModel.onChange(it, 2)})
                 HorizontalDivider(Modifier.height(24.dp))
-                ProductoItem(catalogo.get(3), cantidades.get(3), {cambio -> cantidades[3] = cambio})
+                ProductoItem(uiState.catalogo.get(3), uiState.cantidades.get(3), {viewModel.onChange(it, 3)})
                 HorizontalDivider(Modifier.height(24.dp))
-                ResumenCarrito(totalcantidad, subtotal, porcentajeDescuento, envio, total)
+                ResumenCarrito(uiState.totalcantidad, uiState.subtotal, uiState.porcentajeDescuento, uiState.envio, uiState.total)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton({
-                    cantidades[0] = 0
-                    cantidades[1] = 0
-                    cantidades[2] = 0
-                    cantidades[3] = 0
-                }) {
+                OutlinedButton({ viewModel.onLimpiar() }) {
                     Text("Vaciar Carrito", color = Color.Black)
                 }
-                Button({
-                    cantidades[0] = 0
-                    cantidades[1] = 0
-                    cantidades[2] = 0
-                    cantidades[3] = 0
-                }){
+                Button({ viewModel.onLimpiar() }){
                     Text("Confirmar pedido")
                 }
             }

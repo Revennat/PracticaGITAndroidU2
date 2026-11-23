@@ -28,6 +28,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -35,6 +39,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -49,6 +54,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -71,6 +77,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
@@ -82,241 +90,160 @@ import com.example.delegar.Componentes.Micard
 import kotlin.collections.listOf
 
 
-enum class Prioridad(int: Int){
-    BAJA(1), MEDIA(2), ALTA(3)
-}
-enum class Filtro{
-     TODOS,PENDIENTES, HECHAS
-}
-
-data class Tarea(val id: Int, val titulo: String, val prioridad: Prioridad, val hecha: Boolean = false)
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TareasScreen(modifier: Modifier) {
-    var contador = 0
+fun InicioScreen(modifier: Modifier = Modifier) {
+    val correoCorrecto = "paciente@vida.mx"
+    val passCorrecta = "Vida2025"
 
-    val tareas = remember { mutableStateListOf<Tarea>() }
-    var tarea by remember { mutableStateOf("") }
-    var prioridadNueva by remember { mutableStateOf(Prioridad.ALTA) }
-    var filtroActual by remember { mutableStateOf(Filtro.TODOS) }
-    var mostrarDialogo by remember { mutableStateOf(false) }
-    val tareasVisibles by remember {
-        derivedStateOf {
-            when (filtroActual) {
-                Filtro.TODOS -> tareas
-                Filtro.PENDIENTES -> tareas.filter { !it.hecha }
-                Filtro.HECHAS -> tareas.filter { it.hecha }
-            }
-        }
-    }
+    var correo by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var recordarUsuario by remember { mutableStateOf(false) }
+    var intentos by remember { mutableStateOf(0) }
+    var mensajeError by remember { mutableStateOf("") }
+    var isSesionIniciada by remember { mutableStateOf(false) }
+    val isBotonBloqueado = intentos >= 3
 
-    val pendientes by remember {
-        derivedStateOf {
-            tareas.count() { !it.hecha }
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 46.dp, bottom = 46.dp, start = 16.dp, end = 16.dp), // Margen general para que no pegue a los bordes del teléfono
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Título
-        Text(
-            text = "Mis pendientes",
-            style = MaterialTheme.typography.titleLarge
-        )
-
-        // Fila de Input y Botón de Agregar
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextField(
-                value = tarea,
-                onValueChange = { cambio -> tarea = cambio },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Nueva tarea...") }
-            )
-            Button(
-                onClick = {
-                    if (tarea.isNotEmpty()) {
-                        tareas.add(Tarea(contador++, tarea.trim(), prioridadNueva))
-                        tarea = ""
-                    }
-                },
-                enabled = tarea.isNotEmpty()
-            ) {
-                Text("+")
-            }
-        }
-
-        // Fila de Prioridades
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Prioridad: ")
-            FilterChip(
-                selected = prioridadNueva == Prioridad.ALTA,
-                onClick = { prioridadNueva = Prioridad.ALTA },
-                label = { Text(if (prioridadNueva != Prioridad.ALTA) "Alta" else "✓ Alta") }
-            )
-            FilterChip(
-                selected = prioridadNueva == Prioridad.MEDIA,
-                onClick = { prioridadNueva = Prioridad.MEDIA },
-                label = { Text(if (prioridadNueva != Prioridad.MEDIA) "Media" else "✓ Media") }
-            )
-            FilterChip(
-                selected = prioridadNueva == Prioridad.BAJA,
-                onClick = { prioridadNueva = Prioridad.BAJA },
-                label = { Text(if (prioridadNueva != Prioridad.BAJA) "Baja" else "✓ Baja") }
-            )
-        }
-
-        // Fila de Filtros (Todos, Pendientes, Hechas)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            FilterChip(
-                selected = filtroActual != Filtro.PENDIENTES && filtroActual != Filtro.HECHAS,
-                onClick = { filtroActual = Filtro.TODOS },
-                label = { Text(if (filtroActual != Filtro.TODOS) "Todos" else "✓ Todos") }
-            )
-            FilterChip(
-                selected = filtroActual == Filtro.PENDIENTES,
-                onClick = { filtroActual = Filtro.PENDIENTES },
-                label = { Text(if (filtroActual != Filtro.PENDIENTES) "Pendientes" else "✓ Pendientes") }
-            )
-            FilterChip(
-                selected = filtroActual == Filtro.HECHAS,
-                onClick = { filtroActual = Filtro.HECHAS },
-                label = { Text(if (filtroActual != Filtro.HECHAS) "Hechas" else "✓ Hechas") }
-            )
-        }
-
-        // Lista de tareas (Con .weight(1f) para que respete el espacio y haga scroll interno)
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f), // <- Clave para que no empuje el footer fuera de la pantalla
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            items(tareasVisibles) { tareaItem ->
-                TareaItem(
-                    tarea = tareaItem,
-                    onCheckedChange = { cambio ->
-                        val index = tareas.indexOf(tareaItem)
-                        if (index != -1) {
-                            tareas[index] = tareaItem.copy(hecha = cambio)
-                        }
-                    },
-                    onDelete = {
-                        tareas.remove(tareaItem) // <- Seguro y evita IndexOutOfBoundsException
-                    }
-                )
-            }
-        }
-
-        // Footer inferior fijo
+    if (!isSesionIniciada) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text("Pendientes ${pendientes} de ${tareas.size}")
-            Button(
-                onClick = { mostrarDialogo = true },
-                enabled = tareas.any { it.hecha }
-            ) {
-                Text("Borrar Completadas")
-            }
+            Icon(
+                imageVector = Icons.Default.AddCircle,
+                contentDescription = "Logo",
+                tint = Color(0xFF6750A4),
+                modifier = Modifier.size(64.dp)
+            )
 
-            if (mostrarDialogo) {
-                val cantidadHechas = tareas.count { it.hecha }
+            Spacer(modifier = Modifier.height(16.dp))
 
-                ConfirmarBorradoDialog(
-                    cantidad = cantidadHechas,
-                    onConfirm = {
-                        tareas.removeAll { it.hecha }
-                        mostrarDialogo = false
-                    },
-                    onDismiss = {
-                        mostrarDialogo = false
+            Text("Clínica Vida", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Consulta tus citas médicas", color = Color.Gray, fontSize = 14.sp)
+
+            Spacer(modifier = Modifier.height(32.dp))
+            OutlinedTextField(
+                value = correo,
+                onValueChange = { correo = it },
+                label = { Text("Correo") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Contraseña") },
+                modifier = Modifier.fillMaxWidth(),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val imagenIcono = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = imagenIcono, contentDescription = "Mostrar contraseña")
                     }
-                )
-            }
-        }
-    }
-}
-@Composable
-fun TareaItem(tarea: Tarea, onCheckedChange: (Boolean) -> Unit, onDelete: () -> Unit){
-
-    Box(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        Column {
+                }
+            )
             Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(top = 8.dp)
+                    .clickable { recordarUsuario = !recordarUsuario }
             ) {
                 Checkbox(
-                    checked = tarea.hecha,
-                    onCheckedChange = onCheckedChange
+                    checked = recordarUsuario,
+                    onCheckedChange = { recordarUsuario = it }
                 )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.Start
+                Text("Recordarme", fontSize = 14.sp, color = Color.DarkGray)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            if (mensajeError.isNotEmpty()) {
+                Surface(
+                    color = if (isBotonBloqueado) Color(0xFFFFCDD2) else Color(0xFFFBE9E7),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = tarea.titulo, textDecoration = if (tarea.hecha) TextDecoration.LineThrough else null)
                     Text(
-                        text = tarea.prioridad.toString(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (tarea.prioridad == Prioridad.ALTA) Color.Red else if (tarea.prioridad == Prioridad.MEDIA) Color.Yellow else Color.Green
+                        text = mensajeError,
+                        color = Color(0xFFC62828),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
-                Button(onClick = onDelete) {
-                    Text("x")
-                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            Button(
+                onClick = {
+                    if (correo == correoCorrecto && password == passCorrecta) {
+                        correo = ""
+                        password = ""
+                        mensajeError = ""
+                        intentos = 0
+                        isSesionIniciada = true
+                    } else {
+                        intentos++
+                        correo = ""
+                        password = ""
+
+                        if (intentos >= 3) {
+                            mensajeError = "Acceso bloqueado por seguridad. Intenta más tarde."
+                        } else {
+                            mensajeError = "ingreso correctame la cuenta (intento $intentos de 3)"
+                        }
+                    }
+                },
+                enabled = !isBotonBloqueado,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                Text("Entrar", fontSize = 16.sp)
             }
 
-            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Enlace de contraseña decorativo
+            Text(
+                text = "¿Olvidaste tu contraseña?",
+                color = Color(0xFF6750A4),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { /* No hace nada */ }
+            )
+        }
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("¡Bienvenido!", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6750A4))
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Has iniciado sesión como:")
+            Text(correoCorrecto, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            OutlinedButton(
+                onClick = { isSesionIniciada = false },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                Text("Cerrar sesión")
+            }
         }
     }
-}
 
-@Composable
-fun ConfirmarBorradoDialog(cantidad: Int, onConfirm: () -> Unit, onDismiss: () -> Unit){
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(text = "Borrar tareas completadas")
-        },
-        text = {
-            Text(text = "¿Estás seguro de que deseas eliminar las $cantidad tareas completadas?")
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm
-            ) {
-                Text("Eliminar")
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss
-            ) {
-                Text("Cancelar")
-            }
-        }
-    )
+
 }
 

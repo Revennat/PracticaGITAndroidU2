@@ -87,6 +87,7 @@ import androidx.core.os.bundleOf
 import com.example.delegar.Componentes.Micard
 import kotlin.collections.listOf
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.rounded.Check
@@ -95,6 +96,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.mutableIntStateOf
@@ -104,333 +106,323 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 
-data class Gasto(val id: Int, val concepto: String,
-                 val monto: Double, val categoria: Categoria)
+data class Pregunta(
+    val enunciado: String,
+    val opciones: List<String>,
+    val indiceCorrecta: Int,
+    val retroalimentacion: String
+)
 
-enum class Categoria{
-    Comida, Transporte, Renta, Ocio, Otros
+enum class PantallaQuiz { INICIO, JUEGO, RESULTADOS }
+
+val listaPreguntas = listOf(
+    Pregunta(
+        "¿Qué tipo de dato conviene usar para guardar el valor 3.14?",
+        listOf("Int", "Double", "String", "Boolean"),
+        1,
+        "Incorrecto. La respuesta correcta es Double."
+    ),
+    Pregunta(
+        "¿Qué palabra reservada se usa para declarar una variable inmutable en Kotlin?",
+        listOf("var", "let", "val", "const"),
+        2,
+        "Incorrecto. La respuesta correcta es 'val'."
+    ),
+    Pregunta(
+        "¿Cuál es el símbolo del operador lógico AND?",
+        listOf("||", "&&", "==", "!="),
+        1,
+        "Incorrecto. La respuesta correcta es &&."
+    ),
+    Pregunta(
+        "¿Cómo se inicializa un arreglo vacío de enteros en Kotlin?",
+        listOf("[]", "Array()", "arrayOf()", "intArrayOf()"),
+        3,
+        "Incorrecto. La respuesta correcta es intArrayOf()."
+    ),
+    Pregunta(
+        "¿Qué significa POO?",
+        listOf("Programación Orientada a Objetos", "Procesamiento de Operaciones", "Paradigmas Orientados", "Ninguna"),
+        0,
+        "Incorrecto. Significa Programación Orientada a Objetos."
+    )
+)
+
+@Composable
+fun InicioScreen(modifier: Modifier = Modifier) {
+
+    var pantallaActual by remember { mutableStateOf(PantallaQuiz.INICIO) }
+    var nombreJugador by remember { mutableStateOf("") }
+
+    var indicePregunta by remember { mutableIntStateOf(0) }
+    var puntaje by remember { mutableIntStateOf(0) }
+
+    when (pantallaActual) {
+        PantallaQuiz.INICIO -> {
+            PantallaInicio(
+                nombre = nombreJugador,
+                onNombreChange = { nombreJugador = it },
+                onComenzar = { pantallaActual = PantallaQuiz.JUEGO }
+            )
+        }
+        PantallaQuiz.JUEGO -> {
+            val preguntaActual = listaPreguntas[indicePregunta]
+
+            PantallaPregunta(
+                pregunta = preguntaActual,
+                numeroActual = indicePregunta + 1,
+                totalPreguntas = listaPreguntas.size,
+                puntaje = puntaje,
+                onSiguiente = { acerto ->
+                    if (acerto) puntaje++
+
+                    if (indicePregunta < listaPreguntas.size - 1) {
+                        indicePregunta++
+                    } else {
+                        pantallaActual = PantallaQuiz.RESULTADOS
+                    }
+                }
+            )
+        }
+        PantallaQuiz.RESULTADOS -> {
+            PantallaResultados(
+                nombre = nombreJugador,
+                puntaje = puntaje,
+                total = listaPreguntas.size,
+                onReintentar = {
+                    indicePregunta = 0
+                    puntaje = 0
+                    pantallaActual = PantallaQuiz.JUEGO
+                },
+                onCambiarJugador = {
+                    nombreJugador = ""
+                    indicePregunta = 0
+                    puntaje = 0
+                    pantallaActual = PantallaQuiz.INICIO
+                }
+            )
+        }
+    }
 }
 
 @Composable
-fun PresupuestoScreen(modifier: Modifier = Modifier) {
-    var ingresoTexto by remember { mutableStateOf("4500") }
-    val gastos = remember { mutableStateListOf<Gasto>() }
-    var siguienteId by remember { mutableIntStateOf(1) }
-
-    val regexEntero = Regex("^\\d*$")
-
-
-
-    val gasto by remember {
-        derivedStateOf {
-            gastos.sumOf { it.monto }
-        }
-    }
-
-    val total by remember {
-        derivedStateOf {
-            ingresoTexto.toIntOrNull() ?: 0
-        }
-    }
-
-    val saldoRestante by remember {
-        derivedStateOf {
-            (total - gasto).coerceAtLeast(0.0).toInt()
-        }
-    }
-
-    val porcentaje by remember {
-        derivedStateOf {
-            if (total > 0) {
-                ((gasto * 100) / total).coerceIn(0.0, 100.0).toInt()
-            } else {
-                0
-            }
-        }
-    }
-
-    val gastoPorCategoria by remember {
-        derivedStateOf {
-            gastos
-                .groupBy { it.categoria }
-                .mapValues { (_, lista) -> lista.sumOf { it.monto } }
-        }
-    }
-
-    val categoriaTop by remember {
-        derivedStateOf {
-            gastoPorCategoria.maxByOrNull { (_, totalCategoria) -> totalCategoria }
-        }
-    }
-
-    val nombreMayorGasto = categoriaTop?.key?.name ?: "Ninguno"
-    val montoMayorGasto = categoriaTop?.value ?: 0
-    val progreso = (porcentaje / 100f).coerceIn(0f, 1f)
+fun PantallaInicio(nombre: String, onNombreChange: (String) -> Unit, onComenzar: () -> Unit) {
+    val isNombreValido = nombre.trim().length >= 2
 
     Column(
-        modifier = modifier
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Quiz de programación", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text("Fundamentos - 5 preguntas", color = Color.Gray)
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        OutlinedTextField(
+            value = nombre,
+            onValueChange = onNombreChange,
+            label = { Text("Tu nombre") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = onComenzar,
+            enabled = isNombreValido,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4)),
+            modifier = Modifier.fillMaxWidth().height(50.dp)
+        ) {
+            Text("Comenzar")
+        }
+    }
+}
+
+
+@Composable
+fun PantallaPregunta(
+    pregunta: Pregunta,
+    numeroActual: Int,
+    totalPreguntas: Int,
+    puntaje: Int,
+    onSiguiente: (Boolean) -> Unit
+) {
+    var opcionSeleccionada by remember(pregunta) { mutableIntStateOf(-1) }
+    var isConfirmado by remember(pregunta) { mutableStateOf(false) }
+    val isUltimaPregunta = numeroActual == totalPreguntas
+
+    Column(
+        modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 1. Ingreso mensual
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "Mi Presupuesto",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            OutlinedTextField(
-                value = ingresoTexto,
-                onValueChange = { cambio ->
-                    if (cambio.matches(regexEntero)) {
-                        ingresoTexto = cambio
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                prefix = { Text("$ ") },
-                label = { Text("Ingreso Mensual") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+        Text("Quiz de programación", fontSize = 20.sp, fontWeight = FontWeight.Medium)
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Pregunta $numeroActual de $totalPreguntas", color = Color.Gray, fontSize = 12.sp)
+            Text("Puntaje: $puntaje", color = Color(0xFF6750A4), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
 
-        // 2. Tarjeta de resumen
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFFFF8DC)
-            )
-        ) {
-            Column(
+        LinearProgressIndicator(
+            progress = numeroActual.toFloat() / totalPreguntas,
+            color = Color(0xFF6750A4),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp))
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(pregunta.enunciado, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        pregunta.opciones.forEachIndexed { index, textoOpcion ->
+            val isSelected = opcionSeleccionada == index
+            val isCorrecta = index == pregunta.indiceCorrecta
+
+            // Determinamos el color basado en si ya confirmó
+            val colorFondo = when {
+                !isConfirmado -> if (isSelected) Color(0xFFF3E5F5) else Color.Transparent
+                isConfirmado && isCorrecta -> Color(0xFFE8F5E9) // Verde (Correcta)
+                isConfirmado && isSelected && !isCorrecta -> Color(0xFFFFEBEE) // Rojo (Incorrecta seleccionada)
+                else -> Color.Transparent
+            }
+
+            val colorBorde = when {
+                !isConfirmado -> if (isSelected) Color(0xFF6750A4) else Color.LightGray
+                isConfirmado && isCorrecta -> Color(0xFF4CAF50)
+                isConfirmado && isSelected && !isCorrecta -> Color(0xFFE53935)
+                else -> Color.LightGray
+            }
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = colorFondo),
+                border = BorderStroke(1.dp, colorBorde),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .clickable(enabled = !isConfirmado) { opcionSeleccionada = index } // Bloquea tras confirmar
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        horizontalAlignment = Alignment.Start
-                    ) {
-                        Text(
-                            text = "Gastado",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF5F5B56)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = null // Se maneja en el Card
                         )
-                        Text(
-                            text = "$$gasto",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1F1D1A)
-                        )
+                        Text(textoOpcion, modifier = Modifier.padding(start = 8.dp))
                     }
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        horizontalAlignment = Alignment.Start
-                    ) {
-                        Text(
-                            text = "Saldo",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF5F5B56)
-                        )
-                        Text(
-                            text = "$$saldoRestante",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E7D32)
-                        )
+
+                    // Iconos de feedback (solo visibles al confirmar)
+                    if (isConfirmado) {
+                        if (isCorrecta) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF4CAF50))
+                        } else if (isSelected) {
+                            Icon(Icons.Default.Close, contentDescription = null, tint = Color(0xFFE53935))
+                        }
                     }
                 }
+            }
+        }
 
-                LinearProgressIndicator(
-                    progress = { progreso },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp)
-                        .clip(CircleShape),
-                    color = when {
-                        progreso >= 0.99f -> Color.Red
-                        progreso > 0.80f -> Color(0xFFF6A623)
-                        else -> Color(0xFF2E7D32)
-                    },
-                    trackColor = Color(0xFFEAE5E8),
-                    strokeCap = StrokeCap.Round
-                )
-
+        // Mensaje de retroalimentación
+        if (isConfirmado && opcionSeleccionada != pregunta.indiceCorrecta) {
+            Surface(
+                color = Color(0xFFFFEBEE),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+            ) {
                 Text(
-                    text = "$porcentaje% usado · Mayor gasto: $nombreMayorGasto ($$montoMayorGasto)",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF5F5B56)
+                    text = pregunta.retroalimentacion,
+                    color = Color(0xFFC62828),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(12.dp)
                 )
             }
         }
 
-        // 3. Formulario de nuevo gasto
-        FormularioGasto(
-            onAgregar = { concepto, monto, categoria ->
-                gastos.add(
-                    Gasto(
-                        id = siguienteId++,
-                        concepto = concepto,
-                        monto = monto,
-                        categoria = categoria
-                    )
-                )
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Botones de acción
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Button(
+                onClick = { isConfirmado = true },
+                enabled = opcionSeleccionada != -1 && !isConfirmado,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE8DEF8), contentColor = Color(0xFF6750A4)),
+                modifier = Modifier.weight(1f).height(50.dp)
+            ) {
+                Text("Confirmar")
             }
-        )
 
-        // 4. Lista de gastos recientes
-        ListaGastos(
-            gastos = gastos,
-            onEliminar = { gastoEliminado ->
-                gastos.remove(gastoEliminado)
+            Button(
+                onClick = { onSiguiente(opcionSeleccionada == pregunta.indiceCorrecta) },
+                enabled = isConfirmado,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4)),
+                modifier = Modifier.weight(1f).height(50.dp)
+            ) {
+                Text(if (isUltimaPregunta) "Ver resultados" else "Siguiente")
             }
-        )
-    }
-}
-
-@Composable
-fun FormularioGasto(onAgregar: (concepto: String, monto: Double, Categoria) -> Unit) {
-    var concepto by remember { mutableStateOf("") }
-    var monto by remember { mutableStateOf("0.0") }
-    var categoria by remember { mutableStateOf(Categoria.Comida) }
-    var menuAbierto by remember { mutableStateOf(false) }
-
-    Column(Modifier.fillMaxWidth()
-        .padding(horizontal = 20.dp, vertical = 18.dp)
-    ) {
-        Text("Nuevo Gasto")
-        OutlinedTextField(concepto, {cambio -> concepto = cambio}, label = {Text("Concepto")}, modifier = Modifier.fillMaxWidth())
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            OutlinedTextField(monto,
-                {cambio -> monto = cambio},
-                label = {Text("Monto")},
-                modifier = Modifier.weight(1f),
-                prefix = {Text("$ ")},
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-            Box(modifier = Modifier.weight(1f)) {
-                OutlinedTextField(
-                    value = categoria.name,
-                    onValueChange = {},
-                    readOnly = true,
-                    enabled = false, // evita que abra teclado; el clic lo toma el Box
-                    label = { Text("Categoría") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { menuAbierto = true }
-                )
-
-                DropdownMenu(
-                    expanded = menuAbierto,
-                    onDismissRequest = { menuAbierto = false }
-                ) {
-                    Categoria.entries.forEach { opcion ->
-                        DropdownMenuItem(
-                            text = { Text(opcion.name) },
-                            onClick = {
-                                categoria = opcion
-                                menuAbierto = false
-                            }
-                        )
-                    }
-                }
-            }
-        }
-        Button(
-            {
-                val montoFinal = monto.toDoubleOrNull()
-                if (concepto.isNotBlank() && montoFinal != null && montoFinal >= 0.0) {
-                    onAgregar(concepto.trim(), montoFinal, categoria)
-                    concepto = ""
-                    monto = ""
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Agregar Gasto")
         }
     }
 }
 
 @Composable
-fun ListaGastos(
-    gastos: List<Gasto>,
-    onEliminar: (Gasto) -> Unit,
-    modifier: Modifier = Modifier
+fun PantallaResultados(
+    nombre: String,
+    puntaje: Int,
+    total: Int,
+    onReintentar: () -> Unit,
+    onCambiarJugador: () -> Unit
 ) {
+    val mensaje = when (puntaje) {
+        total -> "¡Perfecto!"
+        in 3..4 -> "Buen trabajo"
+        else -> "Sigue practicando"
+    }
 
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Text("¡$mensaje, $nombre!", fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
-            text = "Gastos recientes",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            text = "$puntaje de $total",
+            fontSize = 48.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = Color(0xFF6750A4)
         )
 
-        gastos.forEach { gasto ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Text(
-                        text = gasto.concepto,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = gasto.categoria.name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6E6A66)
-                    )
-                }
+        Spacer(modifier = Modifier.height(48.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "-$${gasto.monto}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFC62828)
-                    )
-                    IconButton(
-                        onClick = { onEliminar(gasto) },
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Eliminar gasto",
-                            tint = Color(0xFF6E6A66),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
+        Button(
+            onClick = onReintentar,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6750A4)),
+            modifier = Modifier.fillMaxWidth().height(50.dp)
+        ) {
+            Text("Reintentar")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedButton(
+            onClick = onCambiarJugador,
+            modifier = Modifier.fillMaxWidth().height(50.dp)
+        ) {
+            Text("Cambiar jugador", color = Color(0xFF6750A4))
         }
     }
 }

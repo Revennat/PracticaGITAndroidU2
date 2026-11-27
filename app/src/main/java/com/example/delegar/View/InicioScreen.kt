@@ -1,108 +1,49 @@
-package com.example.delegar
+package com.example.delegar.View
 
-import android.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderColors
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.paint
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
-import androidx.core.os.bundleOf
-import com.example.delegar.Componentes.Micard
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.delegar.ModelView.CuentaModelView
 import java.text.DecimalFormat
-import kotlin.collections.listOf
 import kotlin.math.ceil
-import kotlin.math.floor
 
 @Composable
-fun CuentaScreen(modifier: Modifier){
+fun CuentaScreen(modifier: Modifier, viewModel: CuentaModelView = viewModel()){
 
-    var valor by remember { mutableStateOf("0.00") }
-    var porcentajef by remember { mutableStateOf(10) }
-    var personas by remember { mutableStateOf(1) }
-    var UseOtro by remember { mutableStateOf(false) }
-    var redondeado by remember { mutableStateOf(false) }
-    val propina by remember { derivedStateOf {
-        val subtotal = valor.toDoubleOrNull() ?: 0.0
-        subtotal * (porcentajef.toDouble() / 100.0)
-        }
-    }
-    val total by remember { derivedStateOf {
-        (valor.toDoubleOrNull() ?: 0.0) + propina
-        }
-    }
-    val porPersona by remember { derivedStateOf {
-            total / personas
-        }
-    }
-    val pagoPorPersonaRedondeado = ceil(porPersona)
-    val sobrante = if (redondeado) (pagoPorPersonaRedondeado * personas) - total else 0.0
+    val uiState by viewModel.uiState.collectAsState()
+
+    val pagoPorPersonaRedondeado = ceil(uiState.Porpersona)
+    val sobrante = if (uiState.Redondeado) (pagoPorPersonaRedondeado * uiState.Personas) - uiState.Total else 0.0
 
     Box(
         Modifier.fillMaxWidth().padding(24.dp).wrapContentHeight(),
@@ -126,11 +67,8 @@ fun CuentaScreen(modifier: Modifier){
 
             ) {
                 OutlinedTextField(
-                    value = valor,
-                    onValueChange =
-                        {cambio ->
-                        if (cambio.matches(Regex("^\\d*\\.?\\d*\\.?$"))) { valor = cambio }
-                        },
+                    value = uiState.Valor,
+                    onValueChange = {viewModel.onValorChange(it)},
                     modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     label = { Text("Monto de la cuenta") }
@@ -144,15 +82,15 @@ fun CuentaScreen(modifier: Modifier){
             ) {
                 Text("Propina")
                 SelectorPropina(
-                    porcentaje = porcentajef,
-                    usaOtro = UseOtro,
-                    onPorcentajeChange = {cambio -> porcentajef = cambio},
-                    onOtroChange = {cambio -> UseOtro = cambio}
+                    porcentaje = uiState.Porcentaje,
+                    usaOtro = uiState.UseOtro,
+                    onPorcentajeChange = {viewModel.onPorcentajeChange(it)},
+                    onOtroChange = {viewModel.onUseOtroChange(it)}
                 )
 
                 StepperPersonas(
-                    personas = personas,
-                    onChange = {cambio -> personas = cambio}
+                    personas = uiState.Personas,
+                    onChange = {viewModel.onPersonasChange(it)}
                 )
                 Row(
                     modifier.fillMaxWidth(),
@@ -160,9 +98,9 @@ fun CuentaScreen(modifier: Modifier){
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("Redondear por persona?")
-                    Switch(checked = redondeado, onCheckedChange = { cambio -> redondeado = cambio})
+                    Switch(checked = uiState.Redondeado, onCheckedChange = { viewModel.onCheckedChange(it)})
                 }
-                ResultadoCuenta(propina, total, porPersona, sobrante = sobrante )
+                ResultadoCuenta(uiState.Propina, uiState.Total, uiState.Porpersona, sobrante = sobrante )
 
             }
         }
